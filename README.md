@@ -1,284 +1,207 @@
 <div align="center">
-  <img src="./logo.png" alt="A红小策 Logo" width="140" />
-  <h1>A红小策 · 智能投研决策系统</h1>
-  <p>面向策略研究、历史回测与行情监测的量化工作台，统一管理数据、风险规则和模拟执行。</p>
+  <img src="./logo.png" alt="A红小策 Logo" width="132" />
+  <h1>A红小策</h1>
+  <p>面向 A 股的量化研究工作台：策略回测、因子研究、风控审核与模拟执行</p>
+
+  <p>
+    <img alt="Python" src="https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white" />
+    <img alt="API" src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" />
+    <img alt="UI" src="https://img.shields.io/badge/UI-Single--page-0A66C2" />
+    <img alt="License" src="https://img.shields.io/badge/License-NonCommercial-blue" />
+    <img alt="Market" src="https://img.shields.io/badge/Market-A--Share-c0392b" />
+  </p>
 </div>
 
-<p align="center">
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.14.2-3776AB?logo=python&logoColor=white" />
-  <img alt="Framework" src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" />
-  <img alt="Frontend" src="https://img.shields.io/badge/UI-Dashboard-0A66C2?logo=googlechrome&logoColor=white" />
-  <img alt="Status" src="https://img.shields.io/badge/Status-Active-success" />
-  <img alt="Market" src="https://img.shields.io/badge/Market-A--Share-red" />
-</p>
+## 这是什么
 
-## 项目简介
+一个本地运行的量化工作台。把「策略生成 → 风控审核 → 执行清算 → 绩效复核」拆成四层，每一层都能单独验证。
 
-本项目将**策略生成、风控审核、执行清算**分层解耦，支持以下核心场景：
+三条设计取向，决定了它和「拉个框架跑个回测」的区别：
 
-- 历史回测与报告输出
-- 多策略统一管理（内置 + 自定义）
-- Web 面板配置与任务控制
+- **口径先于结论**：前向收益从 T+1 起算、按持有期不重叠取样、涨停与停牌样本按不可交易处理。收益算不准，后面所有分析都是噪音。
+- **风控前置**：信号先过风险审核，止损、回撤、仓位约束不通过就不下单，违规留痕可查。
+- **结论可复核**：回测与因子研究都输出结构化报告（含输入指纹），渲染层不重算、不挑最优参数。
 
-价格口径与边界见 [复权说明](docs/price-policy.md)，界面与功能命名见 [工作台说明](docs/frontend-functional-refresh.md)。
+## 核心能力
 
+| 模块 | 能力 | 入口 |
+|---|---|---|
+| 策略回测 | 11 个内置策略 + 自定义策略，单票 / 批量 / 组合回测 | `/` 工作台 |
+| 因子研究 | RankIC、ICIR、分层回测、IC 衰减、样本外检验，四道关卡给准入结论 | `/factor` |
+| 通达信公式 | 公式编译成可执行策略（27 个常用函数），支持副图指标改造 | `/api/tdx/compile` |
+| 参数优化 | 拐点参数网格搜索 + 样本内/外验证 | `/optimization` |
+| 策略进化 | 事件驱动的多 Agent 生成 / 评估 / 迭代 | `/` → 操作工作台 |
+| 风控与结算 | 一票否决风控、期末结算快照、现金持仓对账 | 引擎内 |
+| AI 条件筛选 | 自然语言 → 结构化筛选条件 + 执行规则 | `/` |
+| 数据接入 | 8 种数据源可切换，统一 OHLCV 校验 | 配置中心 |
 
-首次启动前，将 `config.example.json` 复制为 `config.json`，按本机环境填写数据源路径；密钥等个人设置放入 `config.private.json`。
+## 界面导览
 
-## 5分钟主线导航
+| 路径 | 用途 |
+|---|---|
+| `/` | 主工作台：选策略、填参数、跑回测、看日志与结算 |
+| `/report` | 回测报告页（绩效、交易明细、一致性对比） |
+| `/factor` | 因子研究：选因子、填样本、四道关卡结论、完整报告 |
+| `/optimization` | 参数优化任务列表与结果 |
 
-第一次用，先别管复杂功能，按这 5 步走就行：
+## 快速开始
 
-1. 先启动：Windows 可在虚拟环境中执行 `python -m pip install -r requirements.lock.txt` 安装已固定版本的依赖，再执行 `python server.py` 启动；默认启动只检查依赖，缺失或锁定版本不符会提示手动安装。
-2. 再选策略：在页面顶部勾选你要跑的策略（内置/自定义都行）
-3. 填参数：设置 `股票代码 + 时间区间 + ，模拟初始资金`
-4. 点回测：点击“单票回测”，先拿到第一份结果和日志
-5. 再扩展：需要组合、批量、BLK、TDX、策略进化时，去“操作工作台”
+**1. 环境**　Windows x64 / CPython 3.14（见 `.python-version`）。建议独立虚拟环境。
 
-建议节奏：先跑通单策略，再做组合/批量，最后做策略进化，这样最不容易踩坑。
-
-## 功能地图（按场景）
-
-| 你的目标     | 入口               | 说明                        |
-| -------- | ---------------- | ------------------------- |
-| 快速验证一个策略 | 底部 `单票回测`        | 最短路径，先拿到可解释的回测结果          |
-| 导入公式和板块池 | 操作工作台 -> 策略与板块工具 | TDX 公式转换、BLK 解析、批量看板      |
-| 用自然语言选股   | `AI 条件筛选`         | 用中文描述策略，大模型自动转为可执行筛选条件 |
-| 调整系统参数   | `配置中心`           | 数据源、风控、执行、LLM 等统一维护       |
-| 运行策略进化   | 操作工作台 -> `策略进化`  | 进入 Evolution 看板执行生成/评估/迭代 |
-| 检验因子有效性  | `/factor` 页面 / CLI `scripts/run_factor_lab.py` | IC / ICIR / 分层 / 样本外，四道关卡给出通过或淘汰 |
-| 查看结果报告   | `回测报告`/一致性报告     | 分析绩效、对比基线与一致性             |
-
-## 核心特性
-
-- 多策略并行：内置策略与用户策略统一纳管
-- 风控优先：风险审核一票否决机制，覆盖止损、回撤、仓位约束
-- 回测闭环：从数据获取、信号执行到结果分析全链路打通
-- 因子研究：统一口径的 RankIC / ICIR / 分层 / 样本外验证，四道关卡给准入结论
-- 数据源可切换：TDX 本地数据 / AkShare / Tushare / 默认 API / MySQL / PostgreSQL / DuckDB
-- 可视化运维：`server.py + dashboard.html` 提供操作面板
-
-### 因子研究引擎
-
-`src/factor/` 把「假设 → 数据 → 加工 → 检验 → 证伪 → 合成 → 组合 → 结论」固化成一条可复用管线，替代「一个因子一份脚本」的做法。核心口径写死在代码里：前向收益从 T+1 收盘起算、按持有期不重叠取样、涨停/停牌样本不可交易即置为缺失、预处理严格按「去极值 → 标准化 → 中性化 → 再标准化」执行。
-
-四道关卡（预测力 / 单调性 / 稳健性 / 可实现性）会给出 `通过`、`待补证`、`淘汰` 三种结论，并逐条列出未通过的原因。缺样本外证据或股票池不含退市标的时，结论最高只能是 `待补证`——把数据缺口显式暴露出来，而不是给一个看起来通过的结论。
-
-```bash
-# 合成数据验证链路（结果不能当作因子有效性证据）
-python scripts/run_factor_lab.py --demo
-
-# 真实行情
-python scripts/run_factor_lab.py --codes 600519,000001 --start 2021-01-01 --end 2025-12-31 --horizon 20
-```
-
-输出 `reports/factor-studies/<研究编号>/`：`report.json`（严格 JSON，可用指纹复核）与 `index.html`（离线单文件报告）。口径、阈值与已知限制见 [因子研究框架](docs/因子研究框架.md)。
-
-### AI 条件筛选
-
-用自然语言描述你的选股思路（例如"五日内有涨停，涨停后缩量至一半以下，RSI 处于超卖区间"），系统会调用大模型将描述解析为**结构化筛选条件 + 买卖执行规则**两部分：筛选器负责初筛出候选标的，回测引擎负责按规则执行买卖和仓控。整个过程从"想法"到"可回测策略"一步到位，降低量化门槛。
-
-## 架构设计
-
-### 决策与执行
-
-- 意图规划：数据前置校验与分发
-- 策略引擎：策略信号生成
-- 风险审核：风控审核与拦截
-- 订单执行：执行调度与资金清算
-
-### 功能服务
-
-- 策略注册：策略加载与生命周期管理
-- 账户核算：现金、成本、净值核算
-- 绩效报告：业绩报表与策略排行
-- 订单撮合：撮合执行与交易管理
-- 风险日志：违规记录与风险事件
-- 行情与运维：行情清洗与指标计算
-
-### 流程图
-
-```mermaid
-flowchart LR
-  A[行情数据源] --> B[意图规划 IntentPlanner]
-  B --> C[策略引擎 StrategyEngine]
-  C --> D[风险审核 RiskManager]
-  D -->|通过| E[订单执行 ExecutionEngine]
-  D -->|否决| F[风险日志 RiskAuditLog]
-  E --> G[订单撮合 OrderMatcher]
-  E --> H[账户核算 AccountLedger]
-  E --> I[绩效报告 PerformanceReporter]
-```
-
-## 项目结构
-
-```text
-.
-├─src/
-│  ├─core/            # 策略、风险、执行与运行引擎
-│  ├─services/        # 账户、撮合、报告和行情服务
-│  ├─strategies/      # 内置与自定义策略管理
-│  ├─strategy_intent/ # 策略意图解析与生成
-│  ├─factor/          # 因子研究引擎（预处理、评估、关卡、合成）
-│  ├─optimization/    # 参数优化任务与页面
-│  └─utils/           # 配置、指标、数据源封装
-├─data/               # 历史数据、策略库、报告数据
-├─dashboard.html      # Web 面板
-├─server.py           # FastAPI 服务入口
-├─main.py             # 回测入口
-├─run_live.py         # 实盘监控入口
-└─run_backtest.py     # 命令行回测入口
-```
-
-## 快速开始（3分钟版）
-
-照着下面 4 步走，基本都能一次启动成功。
-
-### 1. 准备环境
-
-- 本轮验证环境为 Windows x64 / CPython 3.14.2，版本见 `.python-version`；建议使用独立虚拟环境。旧版 Python 与其他系统尚未完成这批验收。
-
-### 2. 安装依赖
-
-在项目根目录创建并激活虚拟环境，然后执行（Windows 已验证环境）：
+**2. 安装**
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate          # macOS / Linux: source .venv/bin/activate
 python -m pip install -r requirements.lock.txt
 ```
 
-如果你用的是指定解释器，就改成：
-
-```bash
-python -m pip install -r requirements.lock.txt
-```
-
-### 3. 配置密钥（只放私有文件）
-
-不要把密钥写进 `config.json`，统一放到 `config.private.json`（没有就新建一个）：
+**3. 配置**　复制 `config.example.json` 为 `config.json`，按本机情况改数据源路径。密钥只放 `config.private.json`：
 
 ```json
 {
   "data_provider": {
     "tushare_token": "你的token",
     "default_api_key": "你的api_key",
-    "llm_api_key": "你的llm_key",
-    "strategy_llm_api_key": "你的strategy_llm_key"
+    "llm_api_key": "你的llm_key"
   }
 }
 ```
 
-系统读取优先级：环境变量 > `config.private.json`（或 `private_config_path` 指定文件）> `config.json`。
+读取优先级：环境变量 > `config.private.json` > `config.json`。
 
-### 4. 启动项目
+**4. 启动**
 
 ```bash
-python server.py
+python server.py                # 默认 http://127.0.0.1:8000
+python server.py --port 8001    # 换端口
 ```
 
-说明：Windows x64 / CPython 3.14.2 启动优先检查 `requirements.lock.txt` 的包和精确版本；其他环境保留 `requirements.txt` 检查。默认不会执行 pip；仅明确设置 `AHXC_AUTO_INSTALL_DEPS=1` 才允许自动安装。`requirements.lock.txt` 固定本轮92个依赖版本，不含包文件哈希，其他系统需重新解析与验证。
+一键脚本：`scripts/win一键启动.bat`、`bash "scripts/linux&macOS系统启动.sh"`。
 
-服务默认监听 `127.0.0.1`；配置 `system.server_host` 或环境变量 `SERVER_HOST` 可显式覆盖。网页参数优化入口 `/optimization`，当前优化worker需要源码运行，打包程序会明确提示不支持。
+首次启动只检查依赖，不会自动 pip 安装；确需自动安装时设 `AHXC_AUTO_INSTALL_DEPS=1`。
 
-启动后打开控制台页面，选策略、填参数、点“单票回测”即可开始跑。
+## 因子研究引擎
 
-### 常用命令（可选）
+`src/factor/` 把「假设 → 数据 → 加工 → 检验 → 证伪 → 合成 → 组合 → 结论」固化成一条可复用管线，替代「一个因子一份脚本」。
 
-- Windows 一键启动：`scripts/win一键启动.bat`
-- Linux/macOS 一键启动：`bash "scripts/linux&macOS系统启动.sh"`
-- 指定端口启动：`python server.py --prot 8001`
+四道关卡，任何一关不过就不进组合池：
 
-## 授权说明
+| 关卡 | 检查项 | 阈值 |
+|---|---|---|
+| 预测力 | \|IC\| / ICIR / IC 同号率 / t 值 | 0.03 / 0.5 / 55% / 2.0 |
+| 单调性 | 分层单调性 / 相邻逆序 / 多空 t / 胜率 | 0.8 / ≤1 / 1.5 / 55% |
+| 稳健性 | 样本外保持率 / 参数扰动 / 分域稳定性 / 退市样本覆盖 | 0.6 / 1.0 / 0.6 / 必须 |
+| 可实现性 | 扣费后多头超额 / 换手 | >0 / ≤85% |
 
-本项目采用 **“个人非商业免费 + 商业需授权”** 模式。
+结论分三态：`通过` / `待补证` / `淘汰`。缺样本外证据或股票池不含退市标的时，最高只能是「待补证」——把数据缺口摆在明面上，而不是给一个看起来通过的结论。
 
-**免费使用范围（非商业）**
+```bash
+# 合成数据验证链路（数值不能当作有效性证据）
+python scripts/run_factor_lab.py --demo
 
-- 个人学习
-- 学术研究
-- 本地自用（不对外提供商业服务）
+# 真实行情
+python scripts/run_factor_lab.py --codes 600519,000001 --start 2021-01-01 --end 2025-12-31 --horizon 20
+```
 
-**以下行为必须事先取得作者书面商业授权**
+产物在 `reports/factor-studies/<研究编号>/`：`report.json`（严格 JSON，含 SHA256 指纹）+ `index.html`（离线单文件报告）。细节见 [因子研究框架](docs/因子研究框架.md)。
 
-- 售卖本项目或衍生版本
-- 托管服务、SaaS、云端收费服务
-- 二次包装后销售、分销、代理
-- 任何直接或间接盈利部署
+## 通达信公式
 
-**商业授权联系**
+把公式编译成继承 `BaseImplementedStrategy` 的策略类，支持 27 个常用函数：`MA / EMA / SMA / WMA / HHV / LLV / SUM / REF / COUNT / STD / CROSS / IF / FILTER / EXIST / EVERY / BETWEEN / VALUEWHEN / BARSLAST / BARSSINCE / BARSCOUNT / HHVBARS / LLVBARS / UP / DOWN / ABS / MAX / MIN`。
 
-- 联系方式：通过仓库 Issues 联系维护者
-- 说明：商业授权范围、费用与支持条款以双方签署协议为准。
+```bash
+curl -X POST http://127.0.0.1:8000/api/tdx/compile \
+  -H "Content-Type: application/json" \
+  -d '{"formula_text":"X:=MA(C,20);\nCROSS(C,X)","strategy_id":"TDX001","strategy_name":"均线突破"}'
+```
 
-**免责声明**
+三条口径必须注意：
 
-## 免责声明与用户使用协议
+1. **最后一条语句是持仓条件**，不是触发条件：为真则持有，转假则卖出。`CROSS(...)` 放最后会买一天卖一天。
+2. **`:=` 是赋值，单个 `=` 是比较**。`A:=C>O` 赋值，`A=1` 是判断。
+3. **绘图语句会被忽略**：`DRAWTEXT / DRAWICON / STICKLINE` 与 `COLOR / LINETHICK` 之类的显示属性不进计算。
 
-### 重要提示
+## 回测口径
 
-本软件及配套程序、数据、策略代码、回测引擎（统称“本工具”）为开源量化研究与历史数据回测工具，仅面向金融知识学习、策略逻辑验证、量化技术研究用途，不构成任何投资建议。
+| 项 | 口径 |
+|---|---|
+| 时序 | 只用已完成 K 线；不足完整窗口不触发 |
+| 成交 | 信号后下一根基础 K 线成交，不使用当根未来价格 |
+| 边界 | 保留涨跌停与停牌字段；缺失时报告明确披露，不假装已验证 |
+| 成本 | 佣金 + 印花税 + 滑点，按配置计；印花税卖出单边 |
+| 结算 | 期末输出现金、持仓、已实现/未实现损益、费用与对账差额 |
+| 范围 | 沪深主板 / 创业板 / 科创板 / 北交所，可独立勾选普通股、ST 与退市整理 |
 
-#### 一、工具性质声明
+价格口径与复权规则见 [复权说明](docs/price-policy.md)，交易范围见 [交易范围筛选](docs/交易范围筛选.md)。
 
-1. 本工具仅提供历史行情数据展示、统计计算、策略回测、代码调试、技术分析研究功能。  
-2. 本工具不提供任何证券买卖点位推荐、不推荐具体股票/基金/期货等标的、不预测价格走势、不提供投资决策依据。  
-3. 本工具不属于荐股软件、不属于投资咨询软件、不属于智能交易决策软件。  
+## 数据源
 
-#### 二、风险提示
+| 来源 | 说明 |
+|---|---|
+| TDX | 本地通达信 `vipdoc` 日线/分钟线，默认选项，离线可用 |
+| DuckDB / MySQL / PostgreSQL | 自建行情库，适合批量研究 |
+| AkShare / BaoStock / Tushare / JQData | 网络数据源，需 token 或账号 |
 
-1. 证券、期货、基金等投资行为存在高风险，历史回测结果不代表未来收益，不代表策略有效性。  
-2. 任何基于本工具生成的回测报告、指标结果、信号图表、策略参数，均不能作为实盘交易依据。  
-3. 用户因使用本工具进行实盘交易所产生的任何盈利、亏损、纠纷、损失、民事赔偿、行政处罚、刑事责任，均由用户自行承担全部责任。  
+统一入口 `DataFactory`，切换只改配置。字段与表结构见 [数据源说明](docs/DATA_PROVIDER_README.md)。
 
-#### 三、开发者责任免除（含民宿、茶馆、线下场所）
+## 目录结构
 
-1. 本工具开发者（A红小策及相关主体）不具备证券投资咨询业务资质，不对外开展证券投资咨询活动，不提供任何形式的投资建议。  
-2. 开发者不对任何第三方使用本工具的行为承担法律责任，包括但不限于：  
-   - 个人用户、机构用户、散户社群  
-   - 茶馆、会所、股民交流场所、线下投研空间  
-   - 民宿、酒店、公寓、出租屋等住宿经营场所  
-   - 经销商、合作方、代理商、推广渠道  
-   - 任何商业或非商业场所、平台、社群  
-3. 上述第三方（含民宿、茶馆等）以“A红小策”名义开展的收费荐股、投资指导、收益承诺、会员费、分成、代客理财、直播分析、线下教学等经营活动，均属其独立行为；开发者不知情、不授权、不参与、不控制、不获益、不承担任何连带责任（包括民事赔偿、行政处罚、刑事责任）。  
-4. 本工具为开源发布，开发者不对软件稳定性、连续性、安全性做出任何承诺，因软件使用导致的数据丢失、设备故障、系统异常、经济损失等问题，开发者不承担任何法律责任。  
+```text
+.
+├─src/
+│  ├─core/            # 意图规划、策略引擎、风控、执行、实盘
+│  ├─services/        # 账户、撮合、报告、行情、策略注册
+│  ├─strategies/      # 内置策略与自定义策略
+│  ├─factor/          # 因子研究引擎（预处理 / 评估 / 关卡 / 合成）
+│  ├─tdx/             # 通达信公式编译与终端桥接
+│  ├─strategy_intent/ # 自然语言 → 策略意图
+│  ├─evolution/       # 策略进化多 Agent
+│  ├─optimization/    # 参数优化任务
+│  └─utils/           # 配置、指标、数据源封装
+├─data/               # 本地行情与策略库（不入库）
+├─docs/               # 口径、接口与方案文档
+├─static/             # 前端静态资源与子页面
+├─tests/              # 单元测试与前端契约测试
+├─dashboard.html      # 主面板
+├─server.py           # FastAPI 服务入口
+├─main.py             # 命令行回测入口
+└─scripts/            # 启动、构建、研究脚本
+```
 
-#### 四、用户义务与承诺
+## 桌面端
 
-用户使用本工具即视为已充分理解并承诺：
+`desktop.spec` 配置 PyInstaller 打包，`desktop_launcher.py` 负责托盘、单实例与首次配置初始化。
 
-1. 已明确知晓本工具仅为量化学习与研究用途，不用于任何非法证券活动、违规荐股、收费投资指导、代客理财。  
-2. 具备相应金融投资风险识别能力与承受能力，自愿承担所有使用风险与法律责任。  
-3. 不利用本工具从事违反《证券法》《期货交易管理条例》《证券投资咨询业务管理暂行规定》等法律法规的活动。  
-4. 知晓并同意：开发者不对任何用户或第三方（含民宿、茶馆、线下场所等）的盈亏、纠纷、民事索赔、行政处罚、刑事责任承担任何责任。  
+```bash
+bash scripts/build_desktop.sh          # macOS / Linux
+python -m PyInstaller desktop.spec     # Windows
+```
 
-#### 五、最终解释与法律适用
+产物：`dist/A红小策/A红小策.exe`、`dist/A红小策.app`。
 
-1. 本声明为开源软件使用条件，构成用户使用本工具的前提。  
-2. 因本工具产生的争议，适用中华人民共和国法律管辖。  
-
-> 详细条款请见仓库根目录 `LICENSE` 文件；如与商业协议冲突，以商业协议为准。
-
-## 贡献指南
-
-欢迎提交 Issue 和 PR。建议流程：
-
-1. Fork 项目并创建功能分支
-2. 保持提交粒度清晰，说明改动动机
-3. 提交前确保核心脚本可运行
-4. 通过 PR 描述测试方法与影响范围
-
-
-## 验证与使用说明
-
-回测控制栏的“交易范围”可勾选沪深主板、创业板、科创板、北交所，并独立勾选普通股、ST及退市整理。默认全板块、仅普通股；单票和批量回测均核验范围。ST按当前名单名称识别，历史逐日状态仍未验证。用法与API见[交易范围筛选](docs/交易范围筛选.md)。
-
-
-本地离线验收命令：
+## 测试
 
 ```bash
 python -m pytest tests/unit --ignore=tests/unit/akshare_test.py -q
 node --test tests/frontend/test_price_readiness_ui.cjs tests/frontend/test_trading_scope_ui.cjs
 ```
 
-`akshare_test.py` 为外部数据源联网示例，离线CI不运行；真实行情优化与浏览器验收证据单独记录。CI工作流使用固定Windows/Python环境，远程CI运行结果以Actions实际执行为准。
+当前基线：单元测试 706 项、前端契约测试 29 项通过。`akshare_test.py` 需联网，离线 CI 不运行。
+
+## 已知限制
+
+- **无历史时点股票池**：只有当前名单快照，缺逐日 ST 状态与退市样本，存在幸存者偏差。因子结论因此最高只能是「待补证」。
+- **涨跌停按板块近似**：主板 10%、双创 20%、北交所 30%；ST 的历史 5% 幅度未逐日还原。
+- **成本是一阶近似**：换手率 × 费率，没有冲击成本模型，容量需另行估算。
+- **未做多重检验校正**：一次检验的因子越多，「最好的那个」越可能是运气，建议单次不超过 10 个。
+- **实盘为模拟执行**：不接券商真实下单，仅做信号与撮合演练。
+
+## 许可与免责
+
+**个人非商业免费，商业使用需授权。** 完整条款见 [LICENSE](LICENSE)。
+
+- 本项目仅用于量化学习、历史回测与技术研究，**不构成任何投资建议**，不是荐股软件，也不是投资咨询软件。
+- 不提供买卖点位推荐，不预测价格走势，不推荐具体标的。
+- 历史回测结果不代表未来收益，不得作为实盘交易依据。市场有风险，投资决策请独立判断。
+- 任何第三方以本项目名义开展的收费荐股、代客理财、收益承诺等行为，均与开发者无关。
