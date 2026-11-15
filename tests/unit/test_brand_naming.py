@@ -45,7 +45,7 @@ def test_brand_constants_are_stable():
         ("desktop.spec", f'name="{BRAND_NAME}"'),
         ("desktop.spec", 'bundle_identifier="com.ahxc.app"'),
         ("LICENSE", f"<{BRAND_NAME}智能投研决策系统>"),
-        ("README.md", f"<h1>{BRAND_NAME} · 智能投研决策系统</h1>"),
+        ("README.md", f"<h1>{BRAND_NAME}</h1>"),
     ],
 )
 def test_key_surfaces_carry_current_brand(relative: str, expected: str):
