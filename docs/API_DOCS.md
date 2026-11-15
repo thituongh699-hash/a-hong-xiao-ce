@@ -1,6 +1,6 @@
 # A红小策 API 接口文档
 
-本文档描述了如何通过 HTTP 接口与量化交易系统进行交互，适用于 OpenClaw 智能体或其他外部系统。
+本文档描述如何通过 HTTP 接口与工作台交互，适用于外部智能体、调度脚本或其他第三方系统。
 
 **基础地址 (Base URL):** `http://localhost:8000`
 
@@ -287,13 +287,15 @@ curl -X POST http://localhost:8000/api/control/stop
 {
   "status": "success",
   "capabilities": {
-    "supported_functions": ["ABS", "BARSLAST", "COUNT", "CROSS", "EMA", "HHV", "IF", "LLV", "MA", "MAX", "MIN", "REF", "SMA", "STD", "SUM", "UP", "WMA"],
-    "series_alias": {"C": "close", "O": "open_", "H": "high", "L": "low", "V": "vol", "VOL": "vol", "AMOUNT": "amount"},
+    "supported_functions": ["ABS", "BARSCOUNT", "BARSLAST", "BARSSINCE", "BETWEEN", "COUNT", "CROSS", "DOWN", "EMA", "EVERY", "EXIST", "FILTER", "HHV", "HHVBARS", "IF", "LLV", "LLVBARS", "MA", "MAX", "MIN", "REF", "SMA", "STD", "SUM", "UP", "VALUEWHEN", "WMA"],
+    "series_alias": {"C": "close", "CLOSE": "close", "O": "open_", "OPEN": "open_", "H": "high", "HIGH": "high", "L": "low", "LOW": "low", "V": "vol", "VOL": "vol", "VOLUME": "vol", "AMOUNT": "amount"},
     "operators": ["=", "<>", "AND", "OR", "NOT"],
     "statement_separators": [";", "\\n"]
   }
 }
 ```
+
+`SMA(X,N,M)` 按通达信原生定义计算：`Y = (M*X + (N-M)*Y') / N`，不是简单均线。
 
 ### 9.2 编译通达信公式
 
@@ -648,3 +650,81 @@ curl -X POST http://localhost:8000/api/control/stop
   }
 }
 ```
+
+---
+
+## 11. 因子研究
+
+因子研究接口把「预处理 → RankIC/ICIR → 分层 → 样本外 → 四道关卡」跑成一键任务，结果落盘为 `reports/factor-studies/<研究编号>/`（`report.json` + `index.html`）。
+
+### 11.1 查询因子目录
+
+- **接口地址:** `/api/factor/catalog`
+- **请求方法:** `GET`
+
+返回已注册因子（含经济假设、方向、所需字段）、预处理口径与关卡默认阈值。
+
+### 11.2 启动一轮研究
+
+- **接口地址:** `/api/factor/study`
+- **请求方法:** `POST`
+
+| 字段 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `codes` | string[] | `[]` | 标的列表；`demo=true` 时可为空 |
+| `start` / `end` | string | 空 | 样本区间 `YYYY-MM-DD` |
+| `source` | string | `tdx` | 数据源，同 `DataFactory` |
+| `factor_ids` | string[] | `["vol_20"]` | 要检验的因子 |
+| `horizon` | int | `20` | 持有期，同时是截面取样步长 |
+| `quantiles` | int | `5` | 分层组数 |
+| `entry_lag` | int | `1` | 信号后第几个交易日建仓 |
+| `min_names` | int | `20` | 单截面最少标的 |
+| `oos_ratio` | float | `0.3` | 样本外占比 |
+| `universe` | string | 未命名股票池 | 写入报告 |
+| `survivorship_complete` | bool | `false` | 声明股票池是否覆盖退市与历史 ST |
+| `industry` | object | 空 | `{代码: 行业}`，不给则只做市值中性 |
+| `combine_method` | string | `icir` | `equal` / `ic` / `icir` |
+| `round_trip_cost_bps` | float | `20` | 双边成本 |
+| `cost_multiple` | float | `2.0` | 成本压力倍数 |
+| `demo` | bool | `false` | 用合成面板验证链路，数值不作为有效性证据 |
+| `persist` | bool | `true` | 是否落盘并生成报告页 |
+
+**请求示例：**
+
+```json
+{
+  "codes": ["600519", "000001"],
+  "start": "2021-01-01",
+  "end": "2025-12-31",
+  "source": "tdx",
+  "factor_ids": ["vol_20", "rev_5", "mom_20"],
+  "horizon": 20,
+  "min_names": 20,
+  "universe": "自选池"
+}
+```
+
+**响应要点：** `study_id`、`summary.headline`（一句话结论）、`summary.counts`（通过 / 待补证 / 淘汰）、`sample`（截面期数与样本内外划分）、`warnings`、`report_url`、`json_url`。
+
+`persist=false` 时直接在响应体里返回完整 `report`。
+
+### 11.3 历史研究列表
+
+- **接口地址:** `/api/factor/studies?limit=20`
+- **请求方法:** `GET`
+
+### 11.4 研究明细
+
+- **接口地址:** `/api/factor/study/{study_id}`
+- **请求方法:** `GET`
+
+返回完整报告 JSON，含每个因子的 IC 序列、分层净值、四关检查明细与合成权重。
+
+### 11.5 研究报告页
+
+- **接口地址:** `/api/factor/study/{study_id}/report`
+- **请求方法:** `GET`
+
+返回离线单文件 HTML（图表为内联 SVG，无外部依赖）。
+
+> `study_id` 形如 `fa-20261111-101500-3f2a1c`，只接受该格式，不存在的记录返回 404。

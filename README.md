@@ -169,6 +169,23 @@ curl -X POST http://127.0.0.1:8000/api/tdx/compile \
 └─scripts/            # 启动、构建、研究脚本
 ```
 
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| [API 接口文档](docs/API_DOCS.md) | HTTP 接口、请求参数与响应示例 |
+| [因子研究框架](docs/因子研究框架.md) | 八步流程、四道关卡、已知限制 |
+| [组合回测](docs/组合回测.md) | 多策略信号的 or / and / vote 合成 |
+| [策略进化](docs/策略进化.md) | 事件驱动多 Agent 的选种、评分与入库 |
+| [参数优化模块](docs/参数优化模块.md) | 网格搜索与样本内外验证 |
+| [批量回测操作指南](docs/批量回测操作指南.md) | 批量任务、覆盖率门禁与并发 |
+| [回测交易范围](docs/交易范围筛选.md) | 板块与 ST 的筛选口径 |
+| [复权说明](docs/price-policy.md) | 指标价、成交价与原价的关系 |
+| [数据源说明](docs/DATA_PROVIDER_README.md) | `DataProvider` 封装与表结构 |
+| [前端说明](docs/frontend.md) | 主题、本地静态资源与页面结构 |
+
+研究记录（单因子检验的过程与结论）：[低吸反转](docs/low-reversal-factor-study.md)、[OBV 共振](docs/obv-resonance-factor.md)、[OBV 价值检验](docs/obv-alpha-study.md)。
+
 ## 桌面端
 
 `desktop.spec` 配置 PyInstaller 打包，`desktop_launcher.py` 负责托盘、单实例与首次配置初始化。
