@@ -1,0 +1,76 @@
+/* Real dashboard + HTTP filter/control; task dispatch and prices use isolated fixtures. */
+const { chromium } = require('playwright');
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const root = path.resolve(__dirname, '../..');
+const qa = path.join(root, 'reports/upgrades/2026-10-08/trading-scope');
+fs.mkdirSync(qa, {recursive:true});
+const base = process.env.SCOPE_QA_URL || 'http://127.0.0.1:9145';
+(async () => {
+  const browser = await chromium.launch({headless:true, executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+  const context = await browser.newContext({viewport:{width:1440,height:1000}});
+  const page = await context.newPage();
+  const errors = [], requests = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('request', request => { if (request.url().includes('/api/')) requests.push({url:request.url(),method:request.method()}); });
+  page.on('dialog', dialog => dialog.dismiss());
+  assert.equal((await page.request.post(base+'/__qa__/reset')).ok(),true);
+  await page.goto(base, {waitUntil:'domcontentloaded'});
+  await page.waitForFunction(() => typeof restoreTradingScopePreference === 'function');
+  await page.locator('#trading-scope-toggle').click();
+  await page.locator('#trading-scope-panel').waitFor({state:'visible'});
+  assert.equal(await page.locator('[data-trading-scope-group="boards"]:checked').count(), 4);
+  assert.equal(await page.locator('#trading-scope-type-st').isChecked(), false);
+  await page.screenshot({path:path.join(qa,'交易范围桌面.png'), fullPage:true});
+  await page.locator('#trading-scope-main-board-only').click();
+  const launch = code => page.evaluate(async code => {
+    try { return await startBacktestByApi({stock_code:code, strategy_id:'S-QA', start:'2026-06-01',end:'2026-06-03'}); }
+    catch (e) { return {status:'error',msg:e.message}; }
+  }, code);
+  const submitted = () => page.request.get(base+'/__qa__/submissions').then(r => r.json());
+  const before = requests.length;
+  assert.equal((await launch('300750.SZ')).status, 'error');
+  assert.equal((await submitted()).length, 0);
+  assert.ok(!requests.slice(before).some(r => r.url.includes('test_price_readiness') || r.url.includes('start_backtest')));
+  assert.equal((await launch('600001.SH')).status, 'error');
+  await page.locator('#trading-scope-type-st').check();
+  assert.equal((await launch('600001.SH')).status, 'success');
+  assert.deepEqual((await submitted())[0], {code:'600001.SH',scope:{boards:['main_board'],stock_types:['normal','st']}});
+  // Exercise the actual button with a deterministic strategy selection.
+  await page.locator('#trading-scope-type-st').uncheck();
+  await page.locator('#stock-search-input').fill('600036');
+  await page.evaluate(() => {strategyCatalog = [{id:'S-QA',name:'验收示例',timeframe:'D'}];selectedStrategyIds=['S-QA'];});
+  await page.getByRole('button',{name:'关闭交易范围',exact:true}).click();
+  await page.locator('#backtest-trigger-btn').click();
+  await page.waitForFunction(async base => (await (await fetch(base+'/__qa__/submissions')).json()).length === 2, base);
+  assert.deepEqual((await submitted())[1], {code:'600036.SH',scope:{boards:['main_board'],stock_types:['normal']}});
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('#trading-scope-toggle').click();
+  assert.equal(await page.locator('[data-trading-scope-group="boards"]:checked').count(),1);
+  await page.locator('#trading-scope-board-main_board').uncheck();
+  assert.equal((await launch('600036.SH')).status,'error');
+  await page.locator('#trading-scope-error').waitFor({state:'visible'});
+  assert.equal((await submitted()).length,2);
+  await page.locator('#trading-scope-board-beijing').check();
+  assert.equal((await launch('920001')).status,'success');
+  assert.equal((await submitted())[2].code,'920001.BJ');
+  await page.locator('#trading-scope-type-normal').uncheck();
+  assert.equal((await launch('920001')).status,'error');
+  assert.equal((await submitted()).length,3);
+  await page.locator('#trading-scope-type-normal').check();
+  const search = await page.request.get(base+'/api/search', {params:{q:'普通示例',trading_scope:JSON.stringify({boards:['beijing'],stock_types:['normal']})}});
+  assert.deepEqual((await search.json()).results.map(r=>r.code),['920001.BJ']);
+  await page.getByRole('button',{name:'关闭交易范围',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#trading-scope-toggle').click();
+  const bounds = await page.locator('#trading-scope-panel').boundingBox();
+  assert.ok(bounds && bounds.x>=0 && bounds.x+bounds.width<=390 && bounds.y>=0 && bounds.y+bounds.height<=844);
+  assert.equal(await page.locator('#trading-scope-panel').evaluate(el=>el.scrollWidth>el.clientWidth),false);
+  await page.screenshot({path:path.join(qa,'交易范围手机.png'),fullPage:true});
+  assert.deepEqual(errors,[]);
+  const result={status:'passed',page_errors:errors,semantic_checkboxes:7,default_scope:true,main_board_blocks_chinext:true,st_toggle_controls_submission:true,actual_main_button:true,stored_preference_restored:true,empty_board_or_type_blocks:true,beijing_920_normalized:true,search_scope_filter:true,mobile_open_and_panel_within_viewport:true,submissions:await submitted(),test_boundary:'Real dashboard, HTTP preview/search/control. Synthetic stock list, deterministic price readiness and stub task dispatch. No production lifespan or user configuration writes; full core engine run tested separately with in-memory bars.'};
+  fs.writeFileSync(path.join(qa,'browser-qa.json'),JSON.stringify(result,null,2));
+  console.log(JSON.stringify(result));
+  await browser.close();
+})().catch(e=>{console.error(e);process.exit(1);});

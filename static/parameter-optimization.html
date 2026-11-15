@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>拐弯买入点参数优化 · A红小策</title>
+  <style>
+    :root { color-scheme: light; --ink:#1c2934; --muted:#647584; --line:#dce4e9; --blue:#145a7b; --blue-deep:#104967; --pale:#eaf3f7; --paper:#fff; --bg:#f5f7f6; --warm:#df8a4f; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; }
+    button,input { font:inherit; }
+    a { color:var(--blue); }
+    .top { background:#102f43; color:#fff; border-bottom:4px solid var(--warm); }
+    .top-inner { max-width:1160px; margin:auto; padding:27px 26px 29px; }
+    .eyebrow { margin:0 0 7px; color:#a9cedd; font-size:12px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(26px,4vw,39px); line-height:1.2; letter-spacing:.02em; }
+    .subtitle { max-width:700px; margin:12px 0 0; color:#d3e2e8; }
+    main { max-width:1160px; margin:28px auto 70px; padding:0 26px; display:grid; grid-template-columns:minmax(320px,430px) minmax(0,1fr); gap:22px; align-items:start; }
+    .panel { background:var(--paper); border:1px solid var(--line); border-radius:13px; box-shadow:0 6px 22px rgba(21,48,67,.04); }
+    .panel-header { padding:22px 24px 15px; border-bottom:1px solid var(--line); }
+    h2 { margin:0; font-size:20px; }
+    .panel-header p { margin:7px 0 0; color:var(--muted); font-size:13px; }
+    form { padding:20px 24px 25px; }
+    fieldset { border:0; margin:0 0 21px; padding:0; }
+    legend { padding:0; margin:0 0 12px; font-size:13px; font-weight:800; color:var(--blue-deep); letter-spacing:.05em; }
+    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+    .field { min-width:0; }
+    .field.wide { grid-column:1/-1; }
+    label { display:block; margin:0 0 5px; font-size:13px; font-weight:650; }
+    input { width:100%; min-width:0; padding:9px 10px; border:1px solid #bfccd4; border-radius:7px; background:#fff; color:var(--ink); outline-offset:2px; }
+    input:focus { border-color:var(--blue); outline:2px solid #c6e4f0; }
+    .hint { display:block; color:var(--muted); font-size:12px; margin-top:4px; }
+    .actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+    button { cursor:pointer; border:1px solid var(--blue); color:#fff; background:var(--blue); padding:10px 17px; border-radius:7px; font-weight:700; }
+    button:hover { background:var(--blue-deep); }
+    button:disabled { opacity:.55; cursor:wait; }
+    button.secondary { color:var(--blue); background:#fff; }
+    button.secondary:hover { background:var(--pale); }
+    .message { min-height:22px; margin:12px 0 0; color:#9c3629; font-size:13px; }
+    .message.good { color:#17654f; }
+    .right { min-width:0; }
+    .list-head { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:20px 22px; }
+    .jobs { display:grid; gap:15px; min-width:0; }
+    .empty { padding:31px 22px; text-align:center; color:var(--muted); }
+    .job { padding:20px 22px; min-width:0; }
+    .job pre { white-space:pre-wrap; overflow-wrap:anywhere; max-width:100%; }
+    .job-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .job h3 { margin:0 0 2px; font-size:17px; }
+    .meta { color:var(--muted); font-size:12px; overflow-wrap:anywhere; }
+    .status { display:inline-block; white-space:nowrap; padding:3px 9px; border-radius:99px; background:#e8eef2; color:#415766; font-size:12px; font-weight:800; }
+    .status.running { background:#e9f3fc; color:#145b8a; }
+    .status.completed { background:#e7f5ed; color:#17654f; }
+    .status.failed,.status.interrupted,.status.cancelled { background:#fbebe8; color:#9c3629; }
+    .result-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; margin:17px 0 0; }
+    .result { min-width:0; background:#f7fafb; border:1px solid #e4ebef; border-radius:8px; padding:12px 13px; }
+    .result b { display:block; margin-bottom:5px; color:var(--blue-deep); font-size:13px; }
+    .result pre { margin:8px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; max-height:210px; overflow:auto; }
+    .metric-row { display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid #e4ebef; font-size:12px; }
+    .metric-row span:first-child { color:var(--muted); }
+    .metric-row strong { text-align:right; overflow-wrap:anywhere; }
+    details { margin-top:8px; font-size:12px; color:var(--blue); }
+    summary { cursor:pointer; }
+    .links { display:flex; flex-wrap:wrap; gap:12px; margin-top:14px; font-size:13px; font-weight:650; }
+    .error { margin:12px 0 0; color:#9c3629; font-size:13px; overflow-wrap:anywhere; }
+    @media(max-width:860px) { main { grid-template-columns:1fr; } }
+    @media(max-width:560px) { .top-inner,main { padding-left:16px; padding-right:16px; } .fields,.result-grid { grid-template-columns:1fr; } .field.wide { grid-column:auto; } }
+  </style>
+</head>
+<body>
+  <header class="top"><div class="top-inner">
+    <p class="eyebrow">RESEARCH WORKBENCH / 参数实验</p>
+    <h1>拐弯买入点参数优化</h1>
+    <p class="subtitle">在训练区间选择参数，再用独立验证区间检查结果。验证结果单独展示，不参与参数排名。</p>
+  </div></header>
+  <main>
+    <section class="panel" aria-labelledby="form-title">
+      <div class="panel-header"><h2 id="form-title">新建优化任务</h2><p>百分比参数填数字，例如 4 表示 4%；多个候选值用逗号分隔。</p></div>
+      <form id="job-form">
+        <fieldset><legend>时间范围</legend><div class="fields">
+          <div class="field"><label for="train_start">训练开始</label><input id="train_start" type="date" required></div>
+          <div class="field"><label for="train_end">训练结束</label><input id="train_end" type="date" required></div>
+          <div class="field"><label for="validation_start">验证开始</label><input id="validation_start" type="date" required></div>
+          <div class="field"><label for="end">验证结束</label><input id="end" type="date" required></div>
+        </div></fieldset>
+        <fieldset><legend>入场候选值</legend><div class="fields">
+          <div class="field wide"><label for="intraday_thresholds">盘中阈值（%）</label><input id="intraday_thresholds" type="text" inputmode="decimal" value="3, 4, 4.5, 5" required><span class="hint">例如 3, 4, 4.5, 5</span></div>
+        </div></fieldset>
+        <fieldset><legend>出场与风控候选值</legend><div class="fields">
+          <div class="field"><label for="stops_pct">止损（%）</label><input id="stops_pct" type="text" inputmode="decimal" required></div>
+          <div class="field"><label for="takes_pct">止盈（%）</label><input id="takes_pct" type="text" inputmode="decimal" required></div>
+          <div class="field"><label for="arms_pct">盈利后收紧 / 回撤启动（%）</label><input id="arms_pct" type="text" inputmode="decimal" required></div>
+          <div class="field"><label for="trails_pct">回撤幅度（%）</label><input id="trails_pct" type="text" inputmode="decimal" required></div>
+          <div class="field"><label for="tight_pct">收紧幅度（%）</label><input id="tight_pct" type="text" inputmode="decimal" required></div>
+          <div class="field"><label for="max_holds">最长持有（天）</label><input id="max_holds" type="text" inputmode="numeric" required></div>
+        </div></fieldset>
+        <fieldset><legend>搜索边界</legend><div class="fields">
+          <div class="field"><label for="max_trials">最多尝试组数</label><input id="max_trials" type="number" min="1" max="5000" step="1" required></div>
+          <div class="field"><label for="min_trades">最少成交笔数</label><input id="min_trades" type="number" min="1" max="5000" step="1" required></div>
+        </div></fieldset>
+        <div class="actions"><button id="submit-button" type="submit">开始优化</button></div>
+        <p id="form-message" class="message" role="alert" aria-live="polite"></p>
+      </form>
+    </section>
+    <section class="right" aria-labelledby="jobs-title">
+      <div class="panel list-head"><div><h2 id="jobs-title">历史任务与结果</h2><span class="hint">进行中的任务每 3 秒自动更新</span></div><button id="refresh-button" class="secondary" type="button">刷新</button></div>
+      <div id="jobs" class="jobs" aria-live="polite"><div class="panel empty">正在加载任务…</div></div>
+    </section>
+  </main>
+  <script>
+    const form = document.getElementById('job-form');
+    const message = document.getElementById('form-message');
+    const jobsNode = document.getElementById('jobs');
+    const submitButton = document.getElementById('submit-button');
+    let baseConfig = null;
+    let pollTimer = null;
+
+    async function readJson(url, options) {
+      const response = await fetch(url, options);
+      let data;
+      try { data = await response.json(); } catch { throw new Error('服务器返回了无法读取的结果。'); }
+      if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : `请求失败（${response.status}）`);
+      return data;
+    }
+    function field(id) { return document.getElementById(id); }
+    function csvNumbers(id, integers = false) {
+      const parts = field(id).value.split(/[,，]/).map(value => value.trim());
+      if (parts.some(value => !value)) throw new Error(`${field(id).previousElementSibling.textContent}存在空值。`);
+      const values = parts.map(Number);
+      if (values.some(value => !Number.isFinite(value) || (integers && !Number.isInteger(value))))
+        throw new Error(`${field(id).previousElementSibling.textContent}请输入有效数字。`);
+      return values;
+    }
+    function fillDefaults(config) {
+      baseConfig = config;
+      ['train_start','train_end','validation_start','end','max_trials','min_trades'].forEach(key => {
+        if (config[key] !== undefined) field(key).value = config[key];
+      });
+      ['intraday_thresholds','stops_pct','takes_pct','arms_pct','trails_pct','tight_pct','max_holds'].forEach(key => {
+        if (Array.isArray(config[key])) field(key).value = config[key].join(', ');
+      });
+    }
+    function collectConfig() {
+      if (!baseConfig) throw new Error('默认配置尚未加载。');
+      const config = {...baseConfig};
+      ['train_start','train_end','validation_start','end'].forEach(key => { config[key] = field(key).value; });
+      ['intraday_thresholds','stops_pct','takes_pct','arms_pct','trails_pct','tight_pct'].forEach(key => { config[key] = csvNumbers(key); });
+      config.max_holds = csvNumbers('max_holds', true);
+      config.max_trials = Number(field('max_trials').value);
+      config.min_trades = Number(field('min_trades').value);
+      if (!Number.isInteger(config.max_trials) || config.max_trials < 1 || config.max_trials > 5000 ||
+          !Number.isInteger(config.min_trades) || config.min_trades < 1 || config.min_trades > 5000)
+        throw new Error('搜索组数和最少成交笔数须为 1 到 5000 的整数。');
+      if (config.train_end >= config.validation_start) throw new Error('训练结束必须早于验证开始。');
+      return config;
+    }
+    function text(tag, value, className) {
+      const node = document.createElement(tag);
+      node.textContent = value == null ? '' : String(value);
+      if (className) node.className = className;
+      return node;
+    }
+    function fixed(value) { return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(3) : value; }
+    function addResult(parent, title, value, isTraining = false) {
+      const box = text('div', '', 'result');
+      box.append(text('b', title));
+      if (value == null) { box.append(text('span', '暂无结果')); parent.append(box); return; }
+      const metrics = isTraining ? (value.metrics || {}) : value;
+      const rows = [];
+      if (isTraining && value.params) {
+        const params = value.params;
+        const entryNames = {close:'收盘入场',intraday:'盘中入场',next_open:'次日开盘入场'};
+        const exitNames = {fixed:'固定止盈止损',trailing:'移动止损',drawdown:'回撤退出',ma10:'十日均线退出'};
+        rows.push(['入场方式', entryNames[params.entry_model] || params.entry_model]);
+        if (params.threshold_pct != null) rows.push(['入场阈值', `${fixed(params.threshold_pct)}%`]);
+        if (params.exit) rows.push(['退出方式', exitNames[params.exit.kind] || params.exit.kind]);
+        if (params.max_hold != null) rows.push(['最长持有', `${params.max_hold} 天`]);
+      }
+      if (isTraining && value.score != null) rows.push(['训练得分', fixed(value.score)]);
+      const labels = [
+        ['signals','信号数'],['trades','成交笔数'],['closed','已平仓'],
+        ['open_at_end','期末未平仓'],['mean_signal_return_pct','平均信号收益'],
+        ['mean_trade_cohort_return_pct','平均交易收益'],['closed_win_rate_pct','已平仓胜率'],
+        ['downside_adjusted','下行调整指标']
+      ];
+      for (const [key,label] of labels) {
+        if (metrics[key] != null) {
+          const formatted = key.endsWith('_pct') || key === 'downside_adjusted' ? fixed(metrics[key]) : metrics[key];
+          rows.push([label, key.endsWith('_pct') ? `${formatted}%` : formatted]);
+        }
+      }
+      for (const [label,value] of rows) {
+        const row = text('div', '', 'metric-row'); row.append(text('span', label), text('strong', value)); box.append(row);
+      }
+      const detail = document.createElement('details');
+      detail.append(text('summary', '查看完整数据'), text('pre', JSON.stringify(value, null, 2)));
+      box.append(detail);
+      parent.append(box);
+    }
+    function jobCard(job) {
+      const card = text('article', '', 'panel job');
+      card.dataset.jobId = job.job_id;
+      const head = text('div', '', 'job-head');
+      const info = text('div', '');
+      const s = job.summary;
+      const period = s ? `训练 ${(s.train_period || []).join(' 至 ')} · 验证 ${(s.validation_period || []).join(' 至 ')} · ${s.metadata?.completed || 0} 组参数` : (job.created_at || '任务进行中');
+      info.append(text('h3', job.source === 'precomputed' ? '已有实验结果' : '优化任务'), text('div', period, 'meta'));
+      const labels = {running:'运行中',completed:'已完成',failed:'失败',interrupted:'已中断',cancelled:'已取消'};
+      head.append(info, text('span', labels[job.status] || job.status || '未知', `status ${job.status || ''}`));
+      card.append(head);
+      if (job.progress) {
+        card.append(text('p', `已完成 ${job.progress.completed} / ${job.progress.total} 组参数`, 'meta'));
+      }
+      if (job.cancel_requested) card.append(text('p', '已请求取消，当前试验结束后生效。', 'meta'));
+      if (job.error) card.append(text('p', job.error, 'error'));
+      const summary = job.summary;
+      if (summary && typeof summary === 'object') {
+        const grid = text('div', '', 'result-grid');
+        const training = summary.best_training || null;
+        const validation = summary.validation || null;
+        addResult(grid, '训练区间选出的最佳参数与指标', training, true);
+        addResult(grid, '独立验证区间结果', validation);
+        card.append(grid);
+        if (summary.research_acceptance) {
+          const acceptanceStatus = summary.research_acceptance.status;
+          const acceptanceLabels = {unsupported_hypothesis:'尚未支持研究假设',research_support_for_followup:'可作为后续研究线索'};
+          card.append(text('p', `研究验收：${acceptanceLabels[acceptanceStatus] || acceptanceStatus || '待判定'}`, 'meta'));
+          const acceptance = document.createElement('details');
+          acceptance.append(text('summary', '研究验收结果'), text('pre', JSON.stringify(summary.research_acceptance, null, 2)));
+          card.append(acceptance);
+        }
+      }
+      if (job.source !== 'precomputed' && (job.status === 'running' || ['cancelled','interrupted','failed'].includes(job.status))) {
+        const action = text('button', job.status === 'running' ? '取消任务' : '续跑任务', 'secondary');
+        action.type = 'button'; action.disabled = !!job.cancel_requested;
+        action.addEventListener('click', async () => {
+          action.disabled = true;
+          try {
+            await readJson(`/api/optimization/jobs/${job.job_id}/${job.status === 'running' ? 'cancel' : 'resume'}`, {method:'POST'});
+            await loadJobs();
+          } catch (error) {
+            message.className = 'message'; message.textContent = error.message;
+            action.disabled = false;
+          }
+        });
+        card.append(action);
+      }
+      const links = text('div', '', 'links');
+      if (job.report_url) {
+        const link = text('a', '打开完整报告'); link.href = job.report_url; link.target = '_blank'; link.rel = 'noopener'; links.append(link);
+      }
+      for (const file of job.downloads || job.csv_files || []) {
+        const names = {'training-grid.csv':'训练参数表','validation-trades.csv':'验证逐笔交易','validation-entries.csv':'验证买入记录','training-exclusions.csv':'训练剔除记录','validation-exclusions.csv':'验证剔除记录','frozen-best-training.json':'训练选定参数','optimization-summary.json':'完整运行结果','parameters.json':'本次搜索设置','top-training-with-validation.json':'训练前十名验证'};
+        const link = text('a', `下载${names[file.name] || file.name}`); link.href = file.url; links.append(link);
+      }
+      if (links.childNodes.length) card.append(links);
+      return card;
+    }
+    function schedule(active) {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = active ? setTimeout(loadJobs, 3000) : null;
+    }
+    async function loadJobs() {
+      try {
+        const data = await readJson('/api/optimization/jobs');
+        const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+        jobsNode.replaceChildren(...(jobs.length ? jobs.map(jobCard) : [text('div', '暂无任务。设置参数后即可开始。', 'panel empty')]));
+        schedule(jobs.some(job => job.status === 'running'));
+      } catch (error) {
+        jobsNode.replaceChildren(text('div', `读取任务失败：${error.message}`, 'panel empty'));
+        schedule(false);
+      }
+    }
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      message.className = 'message'; message.textContent = '';
+      submitButton.disabled = true;
+      try {
+        const config = collectConfig();
+        await readJson('/api/optimization/jobs', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(config)});
+        message.className = 'message good'; message.textContent = '任务已启动，可在右侧查看进度和结果。';
+        await loadJobs();
+      } catch (error) { message.textContent = error.message; }
+      finally { submitButton.disabled = false; }
+    });
+    document.getElementById('refresh-button').addEventListener('click', loadJobs);
+    (async () => {
+      try { fillDefaults(await readJson('/api/optimization/defaults')); }
+      catch (error) { message.textContent = `读取默认配置失败：${error.message}`; }
+      await loadJobs();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>因子研究 · A红小策</title>
+  <style>
+    :root { color-scheme: light; --ink:#1c2934; --muted:#647584; --line:#dce4e9; --blue:#145a7b; --blue-deep:#104967; --pale:#eaf3f7; --paper:#fff; --bg:#f5f7f6; --warm:#df8a4f; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; }
+    button,input,select,textarea { font:inherit; }
+    a { color:var(--blue); }
+    .top { background:#102f43; color:#fff; border-bottom:4px solid var(--warm); }
+    .top-inner { max-width:1180px; margin:auto; padding:26px; }
+    .eyebrow { margin:0 0 7px; color:#a9cedd; font-size:12px; font-weight:700; letter-spacing:.16em; }
+    h1 { margin:0; font-size:clamp(24px,3.4vw,34px); line-height:1.2; }
+    .subtitle { max-width:760px; margin:11px 0 0; color:#d3e2e8; font-size:14px; }
+    main { max-width:1180px; margin:26px auto 64px; padding:0 26px; display:grid; grid-template-columns:minmax(330px,430px) minmax(0,1fr); gap:20px; align-items:start; }
+    @media (max-width:900px) { main { grid-template-columns:1fr; } }
+    .panel { background:var(--paper); border:1px solid var(--line); border-radius:13px; }
+    .panel-header { padding:20px 22px 14px; border-bottom:1px solid var(--line); }
+    h2 { margin:0; font-size:19px; }
+    .panel-header p { margin:6px 0 0; color:var(--muted); font-size:13px; }
+    form { padding:18px 22px 22px; }
+    fieldset { border:0; margin:0 0 20px; padding:0; }
+    legend { padding:0; margin:0 0 11px; font-size:13px; font-weight:800; color:var(--blue-deep); letter-spacing:.04em; }
+    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .field { min-width:0; }
+    .field.wide { grid-column:1/-1; }
+    label { display:block; margin:0 0 5px; font-size:13px; font-weight:650; }
+    input,select,textarea { width:100%; min-width:0; padding:8px 10px; border:1px solid #bfccd4; border-radius:7px; background:#fff; color:var(--ink); }
+    textarea { min-height:70px; resize:vertical; font-family:ui-monospace,Consolas,monospace; font-size:13px; }
+    input:focus,select:focus,textarea:focus { border-color:var(--blue); outline:2px solid #c6e4f0; outline-offset:1px; }
+    .hint { display:block; color:var(--muted); font-size:12px; margin-top:4px; }
+    .factors { display:grid; gap:7px; max-height:260px; overflow:auto; padding:3px 2px 3px 0; }
+    .factor { display:flex; gap:8px; align-items:flex-start; padding:7px 9px; border:1px solid #e4ebef; border-radius:8px; background:#fafcfd; }
+    .factor input { width:auto; margin-top:3px; }
+    .factor b { font-weight:650; font-size:13px; }
+    .factor small { display:block; color:var(--muted); font-size:11.5px; line-height:1.45; margin-top:2px; }
+    .switch { display:flex; gap:8px; align-items:center; padding:9px 10px; border:1px dashed #c9d7de; border-radius:8px; background:var(--pale); font-size:13px; }
+    .switch input { width:auto; }
+    .actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px; }
+    button { cursor:pointer; border:1px solid var(--blue); color:#fff; background:var(--blue); padding:10px 17px; border-radius:7px; font-weight:700; }
+    button:hover { background:var(--blue-deep); }
+    button:disabled { opacity:.55; cursor:wait; }
+    button.secondary { color:var(--blue); background:#fff; }
+    .message { min-height:20px; margin:10px 0 0; color:#9c3629; font-size:13px; }
+    .message.good { color:#17654f; }
+    .empty { padding:34px 22px; text-align:center; color:var(--muted); font-size:14px; }
+    .result-body { padding:20px 22px; }
+    .headline { margin:0 0 14px; font-size:15px; line-height:1.6; }
+    .cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
+    .card { background:#f7fafb; border:1px solid #e4ebef; border-radius:8px; padding:10px 12px; }
+    .card span { display:block; color:var(--muted); font-size:12px; }
+    .card b { font-size:19px; font-weight:700; }
+    table { border-collapse:collapse; width:100%; table-layout:fixed; }
+    th,td { padding:7px 6px; border-bottom:1px solid #e9eff2; font-size:12.5px; text-align:right; }
+    th:first-child,td:first-child { text-align:left; }
+    th { color:var(--muted); font-weight:650; font-size:12px; }
+    .badge { display:inline-block; padding:1px 8px; border-radius:99px; font-size:11.5px; font-weight:700; white-space:nowrap; }
+    .badge.pass { background:#e7f5ed; color:#17654f; }
+    .badge.pending { background:#fdf1e3; color:#8a5a17; }
+    .badge.reject { background:#fbebe8; color:#9c3629; }
+    .links { display:flex; gap:14px; flex-wrap:wrap; margin-top:14px; font-size:13px; }
+    .warn { margin-top:16px; padding:12px 14px; border:1px solid #f0d8b8; border-radius:9px; background:#fdf7ee; font-size:12.5px; color:#7a5320; }
+    .warn ul { margin:6px 0 0; padding-left:18px; }
+    code.mono { font-family:ui-monospace,Consolas,monospace; font-size:12px; }
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <p class="eyebrow">A红小策 · 因子研究</p>
+    <h1>先证伪，再入库</h1>
+    <p class="subtitle">统一口径跑完 RankIC、ICIR、分层回测、IC 衰减与样本外检验，再按四道关卡给出「通过 / 待补证 / 淘汰」。
+      缺口径的结论不进入策略库：缺样本外证据或股票池不含退市标的时，结论最高只能是待补证。</p>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="panel-header">
+      <h2>研究配置</h2>
+      <p>口径写死在引擎里：T+1 收盘建仓、按持有期不重叠取样、涨停与停牌样本不计入收益。</p>
+    </div>
+    <form id="study-form">
+      <fieldset>
+        <legend>样本</legend>
+        <div class="fields">
+          <div class="field wide">
+            <label for="universe">股票池名称</label>
+            <input id="universe" name="universe" value="自选池" maxlength="60">
+          </div>
+          <div class="field wide">
+            <label for="codes">标的代码</label>
+            <textarea id="codes" name="codes" placeholder="600519,000001,600036"></textarea>
+            <span class="hint">逗号或换行分隔；演示模式下可留空。</span>
+          </div>
+          <div class="field">
+            <label for="start">开始日期</label>
+            <input id="start" name="start" type="date">
+          </div>
+          <div class="field">
+            <label for="end">结束日期</label>
+            <input id="end" name="end" type="date">
+          </div>
+          <div class="field">
+            <label for="source">数据源</label>
+            <select id="source" name="source">
+              <option value="tdx">TDX 本地</option>
+              <option value="akshare">AkShare</option>
+              <option value="baostock">BaoStock</option>
+              <option value="duckdb">DuckDB</option>
+              <option value="tushare">Tushare</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="horizon">持有期（交易日）</label>
+            <input id="horizon" name="horizon" type="number" min="1" max="120" value="20">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>检验口径</legend>
+        <div class="fields">
+          <div class="field">
+            <label for="quantiles">分层组数</label>
+            <input id="quantiles" name="quantiles" type="number" min="2" max="10" value="5">
+          </div>
+          <div class="field">
+            <label for="min_names">截面最少标的</label>
+            <input id="min_names" name="min_names" type="number" min="5" max="2000" value="20">
+          </div>
+          <div class="field">
+            <label for="oos_ratio">样本外占比</label>
+            <input id="oos_ratio" name="oos_ratio" type="number" min="0.1" max="0.6" step="0.05" value="0.3">
+          </div>
+          <div class="field">
+            <label for="cost">双边成本（bp）</label>
+            <input id="cost" name="cost" type="number" min="0" max="200" step="5" value="20">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>因子</legend>
+        <div class="factors" id="factor-list"><span class="hint">加载因子目录中…</span></div>
+      </fieldset>
+
+      <div class="switch">
+        <input id="demo" name="demo" type="checkbox">
+        <label for="demo" style="margin:0;font-weight:400">
+          演示模式（合成数据）<span class="hint" style="margin:0">只用于验证链路，数值不能作为因子有效性证据。</span>
+        </label>
+      </div>
+
+      <div class="actions" style="margin-top:16px">
+        <button id="run" type="submit">开始检验</button>
+        <span class="hint" id="estimate"></span>
+      </div>
+      <p class="message" id="message"></p>
+    </form>
+  </section>
+
+  <section class="panel" id="result-panel">
+    <div class="panel-header">
+      <h2>检验结果</h2>
+      <p>结论与逐条关卡证据同步写入 report.json，渲染层不重算任何指标。</p>
+    </div>
+    <div id="result" class="empty">还没有运行记录。填好左侧配置后点「开始检验」。</div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const form = document.getElementById('study-form');
+  const list = document.getElementById('factor-list');
+  const message = document.getElementById('message');
+  const button = document.getElementById('run');
+  const result = document.getElementById('result');
+  const estimate = document.getElementById('estimate');
+  let catalog = [];
+
+  const VERDICT_CLASS = { '通过': 'pass', '待补证': 'pending', '淘汰': 'reject' };
+
+  function setMessage(text, good) {
+    message.textContent = text || '';
+    message.className = 'message' + (good ? ' good' : '');
+  }
+
+  function number(value, digits, signed) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+    const n = Number(value);
+    const text = n.toFixed(digits);
+    return signed && n > 0 ? '+' + text : text;
+  }
+
+  function percent(value, digits) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+    return (Number(value) * 100).toFixed(digits) + '%';
+  }
+
+  function badge(verdict) {
+    const cls = VERDICT_CLASS[verdict] || 'pending';
+    return '<span class="badge ' + cls + '">' + verdict + '</span>';
+  }
+
+  async function loadCatalog() {
+    try {
+      const response = await fetch('/api/factor/catalog');
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const payload = await response.json();
+      catalog = payload.factors || [];
+      renderFactors();
+      document.getElementById('estimate').textContent =
+        payload.horizon_note || '';
+    } catch (error) {
+      list.innerHTML = '<span class="hint">因子目录加载失败：' + error.message + '</span>';
+    }
+  }
+
+  function renderFactors() {
+    if (!catalog.length) {
+      list.innerHTML = '<span class="hint">没有可用因子。</span>';
+      return;
+    }
+    const defaults = ['vol_20'];
+    const hasDefault = catalog.some(function (item) { return defaults.indexOf(item.factor_id) >= 0; });
+    list.innerHTML = catalog.map(function (item, index) {
+      const checked = hasDefault
+        ? (defaults.indexOf(item.factor_id) >= 0 ? ' checked' : '')
+        : (index === 0 ? ' checked' : '');
+      const direction = item.direction === 1 ? '值越大越好' : '值越小越好';
+      return '<label class="factor">' +
+        '<input type="checkbox" name="factor_ids" value="' + item.factor_id + '"' + checked + '>' +
+        '<span><b>' + item.name + '</b> <span class="hint" style="display:inline">(' + item.factor_id + ' · ' + direction + ')</span>' +
+        '<small>' + item.hypothesis + '</small></span></label>';
+    }).join('');
+  }
+
+  function collectFactors() {
+    return Array.prototype.slice
+      .call(document.querySelectorAll('input[name="factor_ids"]:checked'))
+      .map(function (node) { return node.value; });
+  }
+
+  function renderReport(payload) {
+    const summary = payload.summary || {};
+    const counts = summary.counts || {};
+    const sample = payload.sample || {};
+    const factors = payload.report ? payload.report.factors : [];
+    const warnings = payload.warnings || [];
+
+    let html = '<div class="result-body">';
+    html += '<p class="headline">' + (summary.headline || '已完成') + '</p>';
+    html += '<div class="cards">' +
+      '<div class="card"><span>通过</span><b>' + (counts['通过'] || 0) + '</b></div>' +
+      '<div class="card"><span>待补证</span><b>' + (counts['待补证'] || 0) + '</b></div>' +
+      '<div class="card"><span>淘汰</span><b>' + (counts['淘汰'] || 0) + '</b></div>' +
+      '</div>';
+    html += '<p class="hint" style="margin:0 0 10px">截面 ' + (sample.rebalance_dates || '—') +
+      ' 期 · 样本内 ' + (sample.in_sample_periods || '—') + ' / 样本外 ' + (sample.out_sample_periods || '—') +
+      ' · 平均 ' + (sample.avg_names ? Math.round(sample.avg_names) : '—') + ' 只标的</p>';
+
+    if (factors.length) {
+      html += '<table><thead><tr><th>因子</th><th>结论</th><th>IC</th><th>ICIR</th><th>换手</th><th>扣费后超额</th></tr></thead><tbody>';
+      factors.forEach(function (item) {
+        if (!item.gates) {
+          html += '<tr><td>' + item.factor_id + '</td><td colspan="5" style="text-align:left;color:#9c3629">' + (item.error || '计算失败') + '</td></tr>';
+          return;
+        }
+        const cost = item.cost || {};
+        html += '<tr><td>' + item.name + '</td><td>' + badge(item.gates.verdict) + '</td>' +
+          '<td>' + number(item.ic.mean_adj, 4, true) + '</td>' +
+          '<td>' + number(item.ic.icir_adj, 2, true) + '</td>' +
+          '<td>' + percent(cost.turnover, 0) + '</td>' +
+          '<td>' + percent(cost.net_long_excess, 2) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    if (payload.report && payload.report.combination) {
+      const combo = payload.report.combination;
+      html += '<p class="hint" style="margin:12px 0 0">多因子合成：' + badge(combo.gates.verdict) +
+        ' 入选 ' + (combo.kept || []).join('、') + '</p>';
+    }
+
+    if (payload.report_url) {
+      html += '<div class="links"><a href="' + payload.report_url + '" target="_blank" rel="noopener">打开完整报告</a>' +
+        '<a href="' + (payload.json_url || '#') + '" target="_blank" rel="noopener">下载 report.json</a></div>';
+    }
+
+    if (warnings.length) {
+      html += '<div class="warn"><b>已知限制</b><ul>' +
+        warnings.map(function (text) { return '<li>' + text + '</li>'; }).join('') +
+        '</ul></div>';
+    }
+    html += '</div>';
+    result.className = '';
+    result.innerHTML = html;
+  }
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const factorIds = collectFactors();
+    if (!factorIds.length) {
+      setMessage('至少选择一个因子。');
+      return;
+    }
+    const demo = document.getElementById('demo').checked;
+    const codes = document.getElementById('codes').value
+      .split(/[\s,，]+/).filter(Boolean);
+    const start = document.getElementById('start').value;
+    const end = document.getElementById('end').value;
+    if (!demo && (!codes.length || !start || !end)) {
+      setMessage('非演示模式需要标的代码、开始日期与结束日期。');
+      return;
+    }
+
+    const body = {
+      demo: demo,
+      codes: demo ? [] : codes,
+      start: demo ? null : start,
+      end: demo ? null : end,
+      source: document.getElementById('source').value,
+      factor_ids: factorIds,
+      horizon: Number(document.getElementById('horizon').value),
+      quantiles: Number(document.getElementById('quantiles').value),
+      min_names: Number(document.getElementById('min_names').value),
+      oos_ratio: Number(document.getElementById('oos_ratio').value),
+      round_trip_cost_bps: Number(document.getElementById('cost').value),
+      universe: document.getElementById('universe').value || '未命名股票池',
+      survivorship_complete: false,
+      persist: true
+    };
+
+    button.disabled = true;
+    setMessage('计算中，单次研究通常需要几秒到几十秒…', true);
+    try {
+      const response = await fetch('/api/factor/study', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail || ('HTTP ' + response.status));
+      renderReport(payload);
+      setMessage('已完成，研究编号 ' + payload.study_id, true);
+    } catch (error) {
+      setMessage('运行失败：' + error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  loadCatalog();
+})();
+</script>
+</body>
+</html>

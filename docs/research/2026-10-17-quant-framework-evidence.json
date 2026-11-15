@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-17",
+  "scope": "Bounded research before correctness and resource optimizations; source code inspected, external systems not executed.",
+  "sources": [
+    {
+      "repository": "mementum/backtrader",
+      "path": "backtrader/resamplerfilter.py",
+      "lines": [
+        360,
+        445
+      ],
+      "sha": "73257fd30c19e33fb2dc7f3a58f0da4b69676102",
+      "url": "https://github.com/mementum/backtrader/blob/master/backtrader/resamplerfilter.py",
+      "verified": "source excerpt read"
+    },
+    {
+      "repository": "freqtrade/freqtrade",
+      "path": "freqtrade/data/converter/converter.py",
+      "lines": [
+        60,
+        145
+      ],
+      "sha": "81c26464b514272ad66977c1b34f617817b6602c",
+      "url": "https://github.com/freqtrade/freqtrade/blob/develop/freqtrade/data/converter/converter.py",
+      "verified": "source excerpt read"
+    },
+    {
+      "repository": "vnpy/vnpy",
+      "path": "vnpy/trader/utility.py",
+      "lines": [
+        200,
+        330
+      ],
+      "sha": "e88c46dc334bce9c776b2033909310e02bc3531c",
+      "url": "https://github.com/vnpy/vnpy/blob/master/vnpy/trader/utility.py",
+      "verified": "source excerpt read"
+    },
+    {
+      "repository": "ricequant/rqalpha",
+      "path": "rqalpha/portfolio/account.py",
+      "lines": [
+        85,
+        165
+      ],
+      "sha": "f32651de6ac99a9366261a8305389bff9b042a7d",
+      "url": "https://github.com/ricequant/rqalpha/blob/master/rqalpha/portfolio/account.py",
+      "verified": "source excerpt read"
+    }
+  ],
+  "docs": [
+    {
+      "url": "https://backtrader.com/docu/data-resampling/data-resampling/",
+      "lesson": "completed/right-edge bars; explicit time boundaries"
+    },
+    {
+      "url": "https://www.freqtrade.io/en/stable/lookahead-analysis/",
+      "lesson": "baseline versus sliced/perturbed replay to expose future-data dependence"
+    },
+    {
+      "url": "https://www.quantconnect.com/docs/v2/writing-algorithms/indicators/automatic-indicators",
+      "lesson": "warmup and readiness; future roadmap, not implemented in this wave"
+    }
+  ],
+  "decisions": [
+    "Derive strategy timeframes from the validated base feed; completed A-share session bars only.",
+    "Strict data validation, explicit missing-data policy, latest revision wins cache merging.",
+    "Explicit settlement reconciliation and trade activity states.",
+    "Incremental risk peak, daily report NAV storage, per-run config snapshot."
+  ],
+  "deferred": [
+    "Corporate-action ledger without verified event cash/share data",
+    "Historical ST/delisting membership provider",
+    "Wholesale strategy indicator rewrites or framework replacement"
+  ],
+  "task_graph": {
+    "parent": [
+      "core timing",
+      "engine wiring",
+      "performance",
+      "server/CLI snapshot",
+      "integration"
+    ],
+    "children": [
+      "disjoint data validation/cache",
+      "disjoint account/risk/ledger",
+      "disjoint report/frontend"
+    ],
+    "final": "full regressions + actual browser + independent review"
+  },
+  "license": "Principles learned; no external implementation copied and no framework dependency added."
+}
